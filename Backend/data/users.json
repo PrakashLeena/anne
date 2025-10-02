@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "1759245213499",
+    "userId": "test-123",
+    "username": "TestUser",
+    "email": "test@example.com",
+    "role": "user",
+    "createdAt": "2025-09-30T15:13:33.500Z",
+    "lastActive": "2025-09-30T15:13:33.500Z"
+  },
+  {
+    "_id": "1759245358610",
+    "userId": "t2uOtvGJVwWItU4gK8WMbIAefLn2",
+    "username": "b",
+    "email": "b@gmail.com",
+    "role": "user",
+    "createdAt": "2025-09-30T15:15:58.610Z",
+    "lastActive": "2025-09-30T15:15:58.610Z"
+  }
+]

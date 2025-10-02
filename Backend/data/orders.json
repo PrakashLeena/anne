@@ -1,0 +1,33 @@
+[
+  {
+    "_id": "1759245398547",
+    "orderId": "ORD-1759245398547-EJGAFP",
+    "userId": "t2uOtvGJVwWItU4gK8WMbIAefLn2",
+    "customerName": "b",
+    "customerEmail": "b@gmail.com",
+    "items": [
+      {
+        "productId": "Console-1758981775512",
+        "title": "Console",
+        "price": 40,
+        "quantity": 1,
+        "image": "https://res.cloudinary.com/dgpocgkx3/image/upload/v1758981777/flashsale/Console-1758981775512_1758981775513.jpg"
+      }
+    ],
+    "totalAmount": 40,
+    "status": "pending",
+    "shippingAddress": {
+      "street": "mara ponthu",
+      "city": "mannar",
+      "state": "nothern",
+      "zipCode": "41000",
+      "country": "Sri Lanka"
+    },
+    "paymentMethod": "Cash on Delivery",
+    "paymentStatus": "pending",
+    "paymentDetails": {},
+    "orderDate": "2025-09-30T15:16:38.547Z",
+    "estimatedDelivery": "2025-10-07T15:16:38.547Z",
+    "trackingNumber": "TRK1759245398547"
+  }
+]

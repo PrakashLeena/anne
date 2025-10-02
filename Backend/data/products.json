@@ -1,0 +1,34 @@
+[
+  {
+    "id": "Samsung Galaxy S23-1758977142774",
+    "title": "Samsung Galaxy S23",
+    "price": 400,
+    "stock": 10,
+    "category": "Smart Phone",
+    "image": "https://res.cloudinary.com/dgpocgkx3/image/upload/v1758977144/products/Samsung%20Galaxy%20S23-1758977142774_1758977142774.jpg"
+  },
+  {
+    "id": "Primum Watch-1758978062614",
+    "title": "Primum Watch",
+    "price": 50,
+    "stock": 50,
+    "category": "Watch",
+    "image": "https://res.cloudinary.com/dgpocgkx3/image/upload/v1758978066/products/Primum%20Watch-1758978062614_1758978062614.jpg"
+  },
+  {
+    "id": "Canon-1758978261178",
+    "title": "Canon",
+    "price": 500,
+    "stock": 20,
+    "category": "Camera",
+    "image": "https://res.cloudinary.com/dgpocgkx3/image/upload/v1758978262/products/Canon-1758978261178_1758978261178.jpg"
+  },
+  {
+    "id": "JBL-1758979888271",
+    "title": "JBL",
+    "price": 30,
+    "stock": 10,
+    "category": "Speaker",
+    "image": "https://res.cloudinary.com/dgpocgkx3/image/upload/v1758979889/products/JBL-1758979888271_1758979888271.jpg"
+  }
+]

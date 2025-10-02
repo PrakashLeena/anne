@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "1759245368199",
+    "message": "Hello ghjkl! Welcome to our store. How can I help you today?",
+    "sender": "admin",
+    "senderName": "Support Team",
+    "userId": null,
+    "sessionId": "session_1759245329914_f1o1rrg8k",
+    "timestamp": "2025-09-30T15:16:08.199Z",
+    "isRead": false
+  },
+  {
+    "_id": "1759245372513",
+    "message": "ghjkl;",
+    "sender": "user",
+    "senderName": "ghjkl",
+    "userId": null,
+    "sessionId": "session_1759245329914_f1o1rrg8k",
+    "timestamp": "2025-09-30T15:16:12.513Z",
+    "isRead": false
+  },
+  {
+    "_id": "1759245379998",
+    "message": "fghjkl;",
+    "sender": "user",
+    "senderName": "ghjkl",
+    "userId": null,
+    "sessionId": "session_1759245329914_f1o1rrg8k",
+    "timestamp": "2025-09-30T15:16:19.998Z",
+    "isRead": false
+  }
+]
