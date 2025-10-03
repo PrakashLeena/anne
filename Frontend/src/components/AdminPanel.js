@@ -5,6 +5,7 @@ import storageService from "../services/storage";
 import axios from "axios";
 import EmailTest from "./EmailTest";
 import PayHereConfig from "./PayHereConfig";
+import { getApiUrl } from "../config/api";
 
 export default function AdminPanel({ onBack, isAdmin = false }) {
   const [tab, setTab] = useState("products");
@@ -205,7 +206,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
 
   async function loadChatSessions() {
     try {
-      const response = await axios.get('/api/chat-sessions');
+      const response = await axios.get(getApiUrl('/api/chat-sessions'));
       setChatSessions(response.data);
     } catch (error) {
       console.error('Failed to load chat sessions:', error);
@@ -214,10 +215,10 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
 
   async function loadChatMessages(sessionId) {
     try {
-      const response = await axios.get(`/api/chat/${sessionId}`);
+      const response = await axios.get(getApiUrl(`/api/chat/${sessionId}`));
       setChatMessages(response.data);
       // Mark messages as read
-      await axios.put(`/api/chat/${sessionId}/read`);
+      await axios.put(getApiUrl(`/api/chat/${sessionId}/read`));
     } catch (error) {
       console.error('Failed to load chat messages:', error);
     }
@@ -227,7 +228,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
     if (!adminMessage.trim() || !selectedSession) return;
     
     try {
-      await axios.post('/api/chat', {
+      await axios.post(getApiUrl('/api/chat'), {
         message: adminMessage.trim(),
         sender: 'admin',
         senderName: 'Admin Support',
@@ -247,7 +248,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
     }
 
     try {
-      const response = await axios.delete(`/api/chat-sessions/${sessionId}`);
+      const response = await axios.delete(getApiUrl(`/api/chat-sessions/${sessionId}`));
       
       if (response.status === 200) {
         // Remove from local state
@@ -270,7 +271,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
   // User management functions
   async function loadUsers() {
     try {
-      const response = await axios.get('/api/users');
+      const response = await axios.get(getApiUrl('/api/users'));
       setUsers(response.data);
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -284,7 +285,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
       
       const newRole = user.role === 'admin' ? 'user' : 'admin';
       
-      await axios.put(`/api/users/${userId}/role`, { role: newRole });
+      await axios.put(getApiUrl(`/api/users/${userId}/role`), { role: newRole });
       
       // Update local state
       setUsers(prev => 
@@ -302,7 +303,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
     }
 
     try {
-      const response = await axios.delete(`/api/users/${userId}`);
+      const response = await axios.delete(getApiUrl(`/api/users/${userId}`));
       
       if (response.status === 200) {
         // Remove from local state
@@ -317,7 +318,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
 
   async function loadOrders() {
     try {
-      const response = await axios.get('/api/orders');
+      const response = await axios.get(getApiUrl('/api/orders'));
       setOrders(response.data);
     } catch (error) {
       console.error('Failed to load orders:', error);
@@ -326,14 +327,14 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
 
   async function updateOrderStatus(orderId, newStatus) {
     try {
-      await axios.put(`/api/orders/${orderId}/status`, { status: newStatus });
+      await axios.put(getApiUrl(`/api/orders/${orderId}/status`), { status: newStatus });
       
       // If order is being cancelled, send cancellation email
       if (newStatus === 'cancelled') {
         const order = orders.find(o => o.orderId === orderId);
         if (order) {
           try {
-            await axios.post('/api/send-cancellation-email', {
+            await axios.post(getApiUrl('/api/send-cancellation-email'), {
               orderId: order.orderId,
               customerEmail: order.customerEmail,
               customerName: order.customerName,
@@ -380,7 +381,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
     }
 
     try {
-      const response = await axios.delete(`/api/orders/${orderId}`);
+      const response = await axios.delete(getApiUrl(`/api/orders/${orderId}`));
       
       if (response.status === 200) {
         // Remove from local state

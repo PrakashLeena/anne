@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { getCurrentUser } from "../services/auth";
+import { getApiUrl } from "../config/api";
 
 export default function Orders({ onBack }) {
   const [orders, setOrders] = useState([]);
@@ -23,7 +24,7 @@ export default function Orders({ onBack }) {
   async function loadUserOrders(userId) {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/orders/user/${userId}`);
+      const response = await axios.get(getApiUrl(`/api/orders/user/${userId}`));
       setOrders(response.data);
     } catch (error) {
       console.error('Failed to load orders:', error);
