@@ -23,8 +23,6 @@
   },
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js",
-    "build": "echo 'Build completed successfully'",
-    "vercel-build": "echo 'Vercel build completed'"
+    "dev": "node index.js"
   }
 }
