@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { getApiUrl } from '../config/api';
 
 export default function EmailTest({ onBack }) {
   const [credentials, setCredentials] = useState({ user: '', pass: '' });
@@ -14,7 +15,7 @@ export default function EmailTest({ onBack }) {
   const testEmailCredentials = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/test-email');
+      const response = await axios.get(getApiUrl('/api/test-email'));
       setTestResult(response.data);
     } catch (error) {
       setTestResult({
@@ -34,7 +35,7 @@ export default function EmailTest({ onBack }) {
 
     setLoading(true);
     try {
-      const response = await axios.post('/api/setup-email', credentials);
+      const response = await axios.post(getApiUrl('/api/setup-email'), credentials);
       setTestResult(response.data);
       if (response.data.success) {
         alert('Email credentials saved successfully!');

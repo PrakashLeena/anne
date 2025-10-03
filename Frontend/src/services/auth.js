@@ -1,19 +1,19 @@
 // Frontend/src/services/auth.js
-// Firebase Authentication integration
 import auth from "../firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  updateProfile,
+  updateProfile
 } from "firebase/auth";
-import axios from "axios";
+import CryptoJS from 'crypto-js';
+import axios from 'axios';
+import { getApiUrl } from '../config/api';
 
 async function registerUserInBackend(user) {
   try {
-    await axios.post('/api/users', {
+    await axios.post(getApiUrl('/api/users'), {
       userId: user.userId,
-      username: user.username,
       email: user.email
     });
   } catch (error) {

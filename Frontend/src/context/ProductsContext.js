@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import storageService from "../services/storage";
+import { getApiUrl } from "../config/api";
 
 const ProductsContext = createContext(null);
 
@@ -13,7 +14,7 @@ export function ProductsProvider({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/products');
+        const res = await fetch(getApiUrl('/api/products'));
         if (!res.ok) throw new Error(`Failed to load products: ${res.status}`);
         const data = await res.json();
         if (!cancelled) setProducts(Array.isArray(data) ? data : []);
@@ -73,7 +74,7 @@ export function ProductsProvider({ children }) {
       };
 
       // Persist to backend
-      const res = await fetch('/api/products', {
+      const res = await fetch(getApiUrl('/api/products'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(p),
@@ -94,7 +95,7 @@ export function ProductsProvider({ children }) {
   async function removeProduct(id) {
     // Optimistically remove from UI after backend confirms
     try {
-      const res = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await fetch(getApiUrl(`/api/products/${encodeURIComponent(id)}`), { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Failed to delete product: ${res.status}`);
