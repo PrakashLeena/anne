@@ -24,6 +24,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
-    "build": "echo 'No build step required for Node.js backend'"
+    "build": "echo 'Build completed successfully'",
+    "vercel-build": "echo 'Vercel build completed'"
   }
 }
