@@ -1,4 +1,12 @@
 {
+  "name": "anne-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Anne E-commerce Application",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
@@ -15,6 +23,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "start:index": "node index.js"
+    "dev": "node index.js",
+    "build": "echo 'No build step required for Node.js backend'"
   }
 }
