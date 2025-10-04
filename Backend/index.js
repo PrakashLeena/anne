@@ -5,7 +5,13 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const nodemailer = require("nodemailer");
-require("dotenv").config();
+// Load environment variables (handle gracefully if .env doesn't exist)
+try {
+  require("dotenv").config();
+} catch (error) {
+  console.log("No .env file found, using environment variables");
+}
+
 const mongoose = require("mongoose");
 const cloudinary = require('cloudinary').v2;
 
@@ -57,12 +63,12 @@ app.get("/", (req, res) => {
       users: "/api/users",
       chat: "/api/chat-sessions"
     }
-  });
 });
 
 // --- MongoDB Atlas connection ---
-const MONGODB_URI = "mongodb+srv://kiboxsonleena:20040620Kiyu@cluster0.cr1byep.mongodb.net/passkey?retryWrites=true&w=majority&appName=Cluster0";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://kiboxsonleena:20040620Kiyu@cluster0.cr1byep.mongodb.net/passkey?retryWrites=true&w=majority&appName=Cluster0";
 
+// Connect to MongoDB (non-blocking for Vercel)
 mongoose
   .connect(MONGODB_URI, {
     // options recommended for Mongoose 8+
@@ -70,12 +76,10 @@ mongoose
   })
   .then(async () => {
     console.log("✅ Connected to MongoDB Atlas");
-    // Test the connection with a ping
-    await mongoose.connection.db.admin().ping();
-    console.log("✅ Pinged your deployment. You successfully connected to MongoDB!");
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
+    // Don't fail the entire app if MongoDB is unavailable
   });
 
 // Chat Message Schema
