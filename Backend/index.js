@@ -1437,4 +1437,32 @@ app.post("/api/whatsapp/webhook", (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(5000, () => console.log("✅ Backend running on http://localhost:5000"));
+// Handle 404 errors
+app.use('*', (req, res) => {
+  console.log('❌ 404 - Route not found:', req.originalUrl);
+  res.status(404).json({ 
+    error: 'Route not found',
+    path: req.originalUrl,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('❌ Server error:', error);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: error.message,
+    timestamp: new Date().toISOString()
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Backend running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Export for Vercel
+module.exports = app;
