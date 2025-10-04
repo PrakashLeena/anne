@@ -15,7 +15,10 @@ const API_CONFIG = {
 
 // Create full URL for API calls
 export const getApiUrl = (endpoint) => {
-  return `${API_CONFIG.BASE_URL}${endpoint}`;
+  // Remove trailing slash from base URL and leading slash from endpoint to prevent double slashes
+  const baseUrl = API_CONFIG.BASE_URL.replace(/\/$/, '');
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${baseUrl}${cleanEndpoint}`;
 };
 
 // Export individual endpoints
