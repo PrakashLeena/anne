@@ -43,6 +43,23 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Root route handler
+app.get("/", (req, res) => {
+  res.json({
+    message: "🚀 Anne E-commerce Backend API",
+    status: "running",
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      test: "/api/test",
+      products: "/api/products",
+      flashProducts: "/api/flash-products",
+      orders: "/api/orders",
+      users: "/api/users",
+      chat: "/api/chat-sessions"
+    }
+  });
+});
+
 // --- MongoDB Atlas connection ---
 const MONGODB_URI = "mongodb+srv://kiboxsonleena:20040620Kiyu@cluster0.cr1byep.mongodb.net/passkey?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -1458,8 +1475,8 @@ app.use((error, req, res, next) => {
   });
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
+// Start server for local development
+if (require.main === module) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`✅ Backend running on port ${PORT}`);
@@ -1467,5 +1484,5 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Export for Vercel serverless
+// Export for Vercel
 module.exports = app;
