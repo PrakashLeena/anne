@@ -7,8 +7,16 @@ const path = require("path");
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 const mongoose = require("mongoose");
+const cloudinary = require('cloudinary').v2;
 
 const app = express();
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // CORS configuration for production
 const corsOptions = {
@@ -177,20 +185,32 @@ function ensureDataFile() {
   if (!fs.existsSync(FLASH_FILE)) fs.writeFileSync(FLASH_FILE, "[]", "utf8");
 }
 
-// MongoDB-based product functions (for production)
+// Cloudinary-based product functions (for production)
 async function readProducts() {
   try {
-    const products = await Product.find({}).sort({ createdAt: -1 });
-    return products.map(p => ({
-      id: p.id,
-      title: p.title,
-      price: p.price,
-      stock: p.stock,
-      category: p.category,
-      image: p.image
+    console.log('🔄 Reading products from Cloudinary...');
+    
+    // Search for all images with the 'product' tag
+    const result = await cloudinary.search
+      .expression('tags:product')
+      .sort_by([['created_at', 'desc']])
+      .max_results(100)
+      .execute();
+
+    console.log(`📦 Found ${result.resources.length} products in Cloudinary`);
+
+    const products = result.resources.map(resource => ({
+      id: resource.public_id,
+      title: resource.context?.title || 'Untitled Product',
+      price: parseFloat(resource.context?.price || '0'),
+      stock: parseInt(resource.context?.stock || '0'),
+      category: resource.context?.category || 'General',
+      image: resource.secure_url
     }));
+
+    return products;
   } catch (error) {
-    console.error('Error reading products from MongoDB:', error);
+    console.error('❌ Error reading products from Cloudinary:', error);
     // Fallback to JSON file for local development
     return readProductsFromFile();
   }
@@ -198,34 +218,78 @@ async function readProducts() {
 
 async function saveProduct(productData) {
   try {
-    console.log('🔄 Attempting to save product to MongoDB:', productData);
+    console.log('🔄 Attempting to save product to Cloudinary:', productData);
     
-    // Check if MongoDB is connected
-    if (mongoose.connection.readyState !== 1) {
-      console.error('❌ MongoDB not connected. Connection state:', mongoose.connection.readyState);
-      throw new Error('Database not connected');
+    // If there's no image, create a placeholder and upload it
+    let imageUrl = productData.image;
+    let publicId = productData.id;
+
+    if (!imageUrl || imageUrl.startsWith('https://images.unsplash.com')) {
+      console.log('📸 No custom image provided, creating placeholder...');
+      
+      // Create a simple placeholder image URL or use the provided image
+      imageUrl = productData.image || `https://via.placeholder.com/400x400/cccccc/666666?text=${encodeURIComponent(productData.title)}`;
     }
-    
-    const product = new Product(productData);
-    console.log('📝 Created product document:', product);
-    
-    const savedProduct = await product.save();
-    console.log('✅ Product saved successfully:', savedProduct);
-    
-    return {
-      id: savedProduct.id,
-      title: savedProduct.title,
-      price: savedProduct.price,
-      stock: savedProduct.stock,
-      category: savedProduct.category,
-      image: savedProduct.image
+
+    // If image is already a Cloudinary URL, extract the public_id
+    if (imageUrl.includes('cloudinary.com')) {
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      publicId = fileName.split('.')[0];
+      console.log('🔍 Using existing Cloudinary image with public_id:', publicId);
+    } else {
+      // Upload image to Cloudinary with product metadata
+      console.log('📤 Uploading image to Cloudinary...');
+      const uploadResult = await cloudinary.uploader.upload(imageUrl, {
+        public_id: publicId,
+        tags: ['product'],
+        context: {
+          title: productData.title,
+          price: productData.price.toString(),
+          stock: productData.stock.toString(),
+          category: productData.category
+        },
+        overwrite: true
+      });
+      
+      imageUrl = uploadResult.secure_url;
+      console.log('✅ Image uploaded to Cloudinary:', imageUrl);
+    }
+
+    // If image already exists, update its metadata
+    if (imageUrl.includes('cloudinary.com')) {
+      console.log('🔄 Updating product metadata in Cloudinary...');
+      await cloudinary.uploader.add_context(
+        {
+          title: productData.title,
+          price: productData.price.toString(),
+          stock: productData.stock.toString(),
+          category: productData.category
+        },
+        [publicId]
+      );
+
+      // Add product tag if not already present
+      await cloudinary.uploader.add_tag('product', [publicId]);
+    }
+
+    const savedProduct = {
+      id: publicId,
+      title: productData.title,
+      price: productData.price,
+      stock: productData.stock,
+      category: productData.category,
+      image: imageUrl
     };
+
+    console.log('✅ Product saved successfully to Cloudinary:', savedProduct);
+    return savedProduct;
+
   } catch (error) {
-    console.error('❌ Error saving product to MongoDB:', error);
+    console.error('❌ Error saving product to Cloudinary:', error);
     console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
     
-    // If MongoDB fails, try fallback to JSON file for debugging
+    // Fallback to JSON file for local development
     try {
       console.log('🔄 Attempting fallback to JSON file...');
       const items = readProductsFromFile();
@@ -235,37 +299,59 @@ async function saveProduct(productData) {
       return productData;
     } catch (fallbackError) {
       console.error('❌ Fallback to JSON file also failed:', fallbackError);
-      throw new Error(`MongoDB save failed: ${error.message}, Fallback failed: ${fallbackError.message}`);
+      throw new Error(`Cloudinary save failed: ${error.message}, Fallback failed: ${fallbackError.message}`);
     }
   }
 }
 
 async function deleteProduct(productId) {
   try {
-    const result = await Product.deleteOne({ id: productId });
-    return result.deletedCount > 0;
+    console.log('🗑️ Deleting product from Cloudinary:', productId);
+    
+    // Delete the image from Cloudinary
+    const result = await cloudinary.uploader.destroy(productId);
+    
+    if (result.result === 'ok') {
+      console.log('✅ Product deleted successfully from Cloudinary');
+      return true;
+    } else {
+      console.log('⚠️ Product not found in Cloudinary or already deleted');
+      return false;
+    }
   } catch (error) {
-    console.error('Error deleting product from MongoDB:', error);
+    console.error('❌ Error deleting product from Cloudinary:', error);
     throw error;
   }
 }
 
 async function readFlashProducts() {
   try {
-    const flashProducts = await FlashProduct.find({}).sort({ createdAt: -1 });
-    return flashProducts.map(p => ({
-      id: p.id,
-      title: p.title,
-      price: p.price,
-      stock: p.stock,
-      category: p.category,
-      image: p.image,
-      discount: p.discount,
-      startsAt: p.startsAt,
-      endsAt: p.endsAt
+    console.log('🔄 Reading flash products from Cloudinary...');
+    
+    // Search for all images with the 'flash-product' tag
+    const result = await cloudinary.search
+      .expression('tags:flash-product')
+      .sort_by([['created_at', 'desc']])
+      .max_results(100)
+      .execute();
+
+    console.log(`⚡ Found ${result.resources.length} flash products in Cloudinary`);
+
+    const flashProducts = result.resources.map(resource => ({
+      id: resource.public_id,
+      title: resource.context?.title || 'Untitled Flash Product',
+      price: parseFloat(resource.context?.price || '0'),
+      stock: parseInt(resource.context?.stock || '0'),
+      category: resource.context?.category || 'General',
+      image: resource.secure_url,
+      discount: parseFloat(resource.context?.discount || '0'),
+      startsAt: resource.context?.startsAt || null,
+      endsAt: resource.context?.endsAt || null
     }));
+
+    return flashProducts;
   } catch (error) {
-    console.error('Error reading flash products from MongoDB:', error);
+    console.error('❌ Error reading flash products from Cloudinary:', error);
     // Fallback to JSON file for local development
     return readFlashFromFile();
   }
@@ -273,31 +359,102 @@ async function readFlashProducts() {
 
 async function saveFlashProduct(productData) {
   try {
-    const flashProduct = new FlashProduct(productData);
-    await flashProduct.save();
-    return {
-      id: flashProduct.id,
-      title: flashProduct.title,
-      price: flashProduct.price,
-      stock: flashProduct.stock,
-      category: flashProduct.category,
-      image: flashProduct.image,
-      discount: flashProduct.discount,
-      startsAt: flashProduct.startsAt,
-      endsAt: flashProduct.endsAt
+    console.log('🔄 Attempting to save flash product to Cloudinary:', productData);
+    
+    // If there's no image, create a placeholder
+    let imageUrl = productData.image;
+    let publicId = productData.id;
+
+    if (!imageUrl || imageUrl.startsWith('https://images.unsplash.com')) {
+      console.log('📸 No custom image provided for flash product, creating placeholder...');
+      imageUrl = productData.image || `https://via.placeholder.com/400x400/ff6b6b/ffffff?text=${encodeURIComponent(productData.title)}`;
+    }
+
+    // If image is already a Cloudinary URL, extract the public_id
+    if (imageUrl.includes('cloudinary.com')) {
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      publicId = fileName.split('.')[0];
+      console.log('🔍 Using existing Cloudinary image with public_id:', publicId);
+    } else {
+      // Upload image to Cloudinary with flash product metadata
+      console.log('📤 Uploading flash product image to Cloudinary...');
+      const uploadResult = await cloudinary.uploader.upload(imageUrl, {
+        public_id: publicId,
+        tags: ['flash-product'],
+        context: {
+          title: productData.title,
+          price: productData.price.toString(),
+          stock: productData.stock.toString(),
+          category: productData.category,
+          discount: productData.discount?.toString() || '0',
+          startsAt: productData.startsAt || '',
+          endsAt: productData.endsAt || ''
+        },
+        overwrite: true
+      });
+      
+      imageUrl = uploadResult.secure_url;
+      console.log('✅ Flash product image uploaded to Cloudinary:', imageUrl);
+    }
+
+    // If image already exists, update its metadata
+    if (imageUrl.includes('cloudinary.com')) {
+      console.log('🔄 Updating flash product metadata in Cloudinary...');
+      await cloudinary.uploader.add_context(
+        {
+          title: productData.title,
+          price: productData.price.toString(),
+          stock: productData.stock.toString(),
+          category: productData.category,
+          discount: productData.discount?.toString() || '0',
+          startsAt: productData.startsAt || '',
+          endsAt: productData.endsAt || ''
+        },
+        [publicId]
+      );
+
+      // Add flash-product tag if not already present
+      await cloudinary.uploader.add_tag('flash-product', [publicId]);
+    }
+
+    const savedFlashProduct = {
+      id: publicId,
+      title: productData.title,
+      price: productData.price,
+      stock: productData.stock,
+      category: productData.category,
+      image: imageUrl,
+      discount: productData.discount,
+      startsAt: productData.startsAt,
+      endsAt: productData.endsAt
     };
+
+    console.log('✅ Flash product saved successfully to Cloudinary:', savedFlashProduct);
+    return savedFlashProduct;
+
   } catch (error) {
-    console.error('Error saving flash product to MongoDB:', error);
+    console.error('❌ Error saving flash product to Cloudinary:', error);
     throw error;
   }
 }
 
 async function deleteFlashProduct(productId) {
   try {
-    const result = await FlashProduct.deleteOne({ id: productId });
-    return result.deletedCount > 0;
+    console.log('🗑️ Deleting flash product from Cloudinary:', productId);
+    
+    // Delete the image from Cloudinary
+    const result = await cloudinary.uploader.destroy(productId);
+    
+    if (result.result === 'ok') {
+      console.log('✅ Flash product deleted successfully from Cloudinary');
+      return true;
+    } else {
+      console.log('⚠️ Flash product not found in Cloudinary or already deleted');
+      return false;
+    }
   } catch (error) {
-    console.error('Error deleting flash product from MongoDB:', error);
+    console.error('❌ Error deleting flash product from Cloudinary:', error);
     throw error;
   }
 }

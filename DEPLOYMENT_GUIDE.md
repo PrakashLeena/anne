@@ -14,11 +14,15 @@ Your admin panel functions (add products, flash sales, live chat) are not workin
 4. Set the following **Environment Variables** in Vercel:
 
 ```env
-MONGODB_URI=mongodb+srv://kiboxsonleena:20040620Kiyu@cluster0.cr1byep.mongodb.net/passkey?retryWrites=true&w=majority&appName=Cluster0
 NODE_ENV=production
 ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app
 FRONTEND_URL=https://your-frontend-domain.vercel.app
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 ```
+
+**Note:** MongoDB is no longer required for products - they are now stored in Cloudinary!
 
 5. Deploy the backend
 6. Note the backend URL (e.g., `https://your-backend-abc123.vercel.app`)
