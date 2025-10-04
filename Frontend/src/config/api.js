@@ -1,7 +1,8 @@
 // API Configuration
 const API_CONFIG = {
   // Use environment variable or fallback to localhost for development
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  // Ensure no trailing slash
+  BASE_URL: (process.env.REACT_APP_API_URL || 'http://localhost:5000').replace(/\/$/, ''),
   
   // API endpoints
   ENDPOINTS: {
@@ -15,10 +16,14 @@ const API_CONFIG = {
 
 // Create full URL for API calls
 export const getApiUrl = (endpoint) => {
-  // Remove trailing slash from base URL and leading slash from endpoint to prevent double slashes
-  const baseUrl = API_CONFIG.BASE_URL.replace(/\/$/, '');
+  // Ensure endpoint starts with slash
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return `${baseUrl}${cleanEndpoint}`;
+  const fullUrl = `${API_CONFIG.BASE_URL}${cleanEndpoint}`;
+  
+  // Debug logging
+  console.log('🔗 API URL:', fullUrl);
+  
+  return fullUrl;
 };
 
 // Export individual endpoints

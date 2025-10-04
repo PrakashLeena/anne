@@ -11,40 +11,33 @@ const cloudinary = require('cloudinary').v2;
 
 const app = express();
 
-// Configure Cloudinary
-cloudinary.config({
+// Configure Cloudinary with validation
+const cloudinaryConfig = {
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+};
 
-// CORS configuration for production
+// Validate Cloudinary configuration
+if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
+  console.error('❌ Cloudinary configuration missing!');
+  console.error('Required environment variables:');
+  console.error('- CLOUDINARY_CLOUD_NAME:', cloudinaryConfig.cloud_name ? '✅' : '❌');
+  console.error('- CLOUDINARY_API_KEY:', cloudinaryConfig.api_key ? '✅' : '❌');
+  console.error('- CLOUDINARY_API_SECRET:', cloudinaryConfig.api_secret ? '✅' : '❌');
+} else {
+  console.log('✅ Cloudinary configuration loaded successfully');
+}
+
+cloudinary.config(cloudinaryConfig);
+
+// CORS configuration for production - simplified for debugging
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim())
-      : ['http://localhost:3000', 'https://localhost:3000'];
-    
-    // For debugging: log all origins
-    console.log('🌐 CORS request from origin:', origin);
-    console.log('🔍 Allowed origins:', allowedOrigins);
-    
-    // Allow all Vercel domains for debugging
-    if (origin && (origin.includes('vercel.app') || allowedOrigins.indexOf(origin) !== -1)) {
-      console.log('✅ CORS allowed for origin:', origin);
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked origin:', origin);
-      // For debugging, allow all origins temporarily
-      callback(null, true); // Change this back to callback(new Error('Not allowed by CORS')) after debugging
-    }
-  },
+  origin: true, // Allow all origins for now
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 };
 
 app.use(cors(corsOptions));
@@ -1257,7 +1250,13 @@ app.get("/api/test", (req, res) => {
     message: "API is working", 
     timestamp: new Date().toISOString(),
     mongoState: mongoose.connection.readyState,
-    mongoStateText: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+    mongoStateText: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    cloudinaryConfig: {
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Missing',
+      api_key: process.env.CLOUDINARY_API_KEY ? '✅ Set' : '❌ Missing',
+      api_secret: process.env.CLOUDINARY_API_SECRET ? '✅ Set' : '❌ Missing'
+    },
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
