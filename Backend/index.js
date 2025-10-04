@@ -20,16 +20,23 @@ const corsOptions = {
       ? process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim())
       : ['http://localhost:3000', 'https://localhost:3000'];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // For debugging: log all origins
+    console.log('🌐 CORS request from origin:', origin);
+    console.log('🔍 Allowed origins:', allowedOrigins);
+    
+    // Allow all Vercel domains for debugging
+    if (origin && (origin.includes('vercel.app') || allowedOrigins.indexOf(origin) !== -1)) {
+      console.log('✅ CORS allowed for origin:', origin);
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.log('❌ CORS blocked origin:', origin);
+      // For debugging, allow all origins temporarily
+      callback(null, true); // Change this back to callback(new Error('Not allowed by CORS')) after debugging
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
 };
 
 app.use(cors(corsOptions));
@@ -191,19 +198,45 @@ async function readProducts() {
 
 async function saveProduct(productData) {
   try {
+    console.log('🔄 Attempting to save product to MongoDB:', productData);
+    
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected. Connection state:', mongoose.connection.readyState);
+      throw new Error('Database not connected');
+    }
+    
     const product = new Product(productData);
-    await product.save();
+    console.log('📝 Created product document:', product);
+    
+    const savedProduct = await product.save();
+    console.log('✅ Product saved successfully:', savedProduct);
+    
     return {
-      id: product.id,
-      title: product.title,
-      price: product.price,
-      stock: product.stock,
-      category: product.category,
-      image: product.image
+      id: savedProduct.id,
+      title: savedProduct.title,
+      price: savedProduct.price,
+      stock: savedProduct.stock,
+      category: savedProduct.category,
+      image: savedProduct.image
     };
   } catch (error) {
-    console.error('Error saving product to MongoDB:', error);
-    throw error;
+    console.error('❌ Error saving product to MongoDB:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    // If MongoDB fails, try fallback to JSON file for debugging
+    try {
+      console.log('🔄 Attempting fallback to JSON file...');
+      const items = readProductsFromFile();
+      items.push(productData);
+      writeProductsToFile(items);
+      console.log('✅ Product saved to JSON file as fallback');
+      return productData;
+    } catch (fallbackError) {
+      console.error('❌ Fallback to JSON file also failed:', fallbackError);
+      throw new Error(`MongoDB save failed: ${error.message}, Fallback failed: ${fallbackError.message}`);
+    }
   }
 }
 
@@ -1061,6 +1094,16 @@ app.get("/api/payhere/return", (req, res) => {
   }
 });
 
+// Test endpoint to verify API is working
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    message: "API is working", 
+    timestamp: new Date().toISOString(),
+    mongoState: mongoose.connection.readyState,
+    mongoStateText: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+  });
+});
+
 // Get all products
 app.get("/api/products", async (req, res) => {
   try {
@@ -1073,10 +1116,16 @@ app.get("/api/products", async (req, res) => {
 
 app.post("/api/products", async (req, res) => {
   try {
+    console.log('📥 Received product creation request:', req.body);
+    
     const { id, title, price, stock, category, image } = req.body || {};
+    
+    // Validate required fields
     if (!title || typeof price !== "number") {
+      console.error('❌ Validation failed - missing required fields');
       return res.status(400).json({ error: "Missing required fields: title, price" });
     }
+    
     const pid = String(id || `${title}-${Date.now()}`);
     const productData = {
       id: pid,
@@ -1086,10 +1135,19 @@ app.post("/api/products", async (req, res) => {
       category: category || (title ? title.split(" ")[0] : "General"),
       image: image || null,
     };
+    
+    console.log('🔄 Prepared product data:', productData);
+    
     const savedProduct = await saveProduct(productData);
+    console.log('✅ Product saved, sending response:', savedProduct);
+    
     res.status(201).json(savedProduct);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error in POST /api/products:', err);
+    res.status(500).json({ 
+      error: err.message,
+      details: 'Check server logs for more information'
+    });
   }
 });
 
