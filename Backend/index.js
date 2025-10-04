@@ -10,7 +10,29 @@ const mongoose = require("mongoose");
 
 const app = express();
 
-app.use(cors());
+// CORS configuration for production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim())
+      : ['http://localhost:3000', 'https://localhost:3000'];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- MongoDB Atlas connection ---
@@ -106,7 +128,38 @@ const credentialSchema = new mongoose.Schema({
 
 const Credential = mongoose.model("Credential", credentialSchema, "bulkmail");
 
-// Persistent JSON storage for products
+// Product Schema
+const productSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+  stock: { type: Number, default: 0 },
+  category: { type: String, default: 'General' },
+  image: { type: String, default: null },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+// Flash Product Schema
+const flashProductSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+  stock: { type: Number, default: 0 },
+  category: { type: String, default: 'General' },
+  image: { type: String, default: null },
+  discount: { type: Number, default: null },
+  startsAt: { type: String, default: null },
+  endsAt: { type: String, default: null },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const FlashProduct = mongoose.model('FlashProduct', flashProductSchema);
+
+// Persistent JSON storage for products (fallback for local development)
 const DATA_DIR = path.join(__dirname, "data");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const FLASH_FILE = path.join(DATA_DIR, "flash_products.json");
@@ -117,7 +170,107 @@ function ensureDataFile() {
   if (!fs.existsSync(FLASH_FILE)) fs.writeFileSync(FLASH_FILE, "[]", "utf8");
 }
 
-function readProducts() {
+// MongoDB-based product functions (for production)
+async function readProducts() {
+  try {
+    const products = await Product.find({}).sort({ createdAt: -1 });
+    return products.map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      stock: p.stock,
+      category: p.category,
+      image: p.image
+    }));
+  } catch (error) {
+    console.error('Error reading products from MongoDB:', error);
+    // Fallback to JSON file for local development
+    return readProductsFromFile();
+  }
+}
+
+async function saveProduct(productData) {
+  try {
+    const product = new Product(productData);
+    await product.save();
+    return {
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      stock: product.stock,
+      category: product.category,
+      image: product.image
+    };
+  } catch (error) {
+    console.error('Error saving product to MongoDB:', error);
+    throw error;
+  }
+}
+
+async function deleteProduct(productId) {
+  try {
+    const result = await Product.deleteOne({ id: productId });
+    return result.deletedCount > 0;
+  } catch (error) {
+    console.error('Error deleting product from MongoDB:', error);
+    throw error;
+  }
+}
+
+async function readFlashProducts() {
+  try {
+    const flashProducts = await FlashProduct.find({}).sort({ createdAt: -1 });
+    return flashProducts.map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      stock: p.stock,
+      category: p.category,
+      image: p.image,
+      discount: p.discount,
+      startsAt: p.startsAt,
+      endsAt: p.endsAt
+    }));
+  } catch (error) {
+    console.error('Error reading flash products from MongoDB:', error);
+    // Fallback to JSON file for local development
+    return readFlashFromFile();
+  }
+}
+
+async function saveFlashProduct(productData) {
+  try {
+    const flashProduct = new FlashProduct(productData);
+    await flashProduct.save();
+    return {
+      id: flashProduct.id,
+      title: flashProduct.title,
+      price: flashProduct.price,
+      stock: flashProduct.stock,
+      category: flashProduct.category,
+      image: flashProduct.image,
+      discount: flashProduct.discount,
+      startsAt: flashProduct.startsAt,
+      endsAt: flashProduct.endsAt
+    };
+  } catch (error) {
+    console.error('Error saving flash product to MongoDB:', error);
+    throw error;
+  }
+}
+
+async function deleteFlashProduct(productId) {
+  try {
+    const result = await FlashProduct.deleteOne({ id: productId });
+    return result.deletedCount > 0;
+  } catch (error) {
+    console.error('Error deleting flash product from MongoDB:', error);
+    throw error;
+  }
+}
+
+// Fallback functions for local development
+function readProductsFromFile() {
   ensureDataFile();
   try {
     const raw = fs.readFileSync(PRODUCTS_FILE, "utf8");
@@ -128,12 +281,12 @@ function readProducts() {
   }
 }
 
-function writeProducts(list) {
+function writeProductsToFile(list) {
   ensureDataFile();
   fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(list, null, 2), "utf8");
 }
 
-function readFlash() {
+function readFlashFromFile() {
   ensureDataFile();
   try {
     const raw = fs.readFileSync(FLASH_FILE, "utf8");
@@ -144,7 +297,7 @@ function readFlash() {
   }
 }
 
-function writeFlash(list) {
+function writeFlashToFile(list) {
   ensureDataFile();
   fs.writeFileSync(FLASH_FILE, JSON.stringify(list, null, 2), "utf8");
 }
@@ -908,15 +1061,24 @@ app.get("/api/payhere/return", (req, res) => {
   }
 });
 
-app.post("/api/products", (req, res) => {
+// Get all products
+app.get("/api/products", async (req, res) => {
+  try {
+    const items = await readProducts();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/products", async (req, res) => {
   try {
     const { id, title, price, stock, category, image } = req.body || {};
     if (!title || typeof price !== "number") {
       return res.status(400).json({ error: "Missing required fields: title, price" });
     }
-    const items = readProducts();
     const pid = String(id || `${title}-${Date.now()}`);
-    const product = {
+    const productData = {
       id: pid,
       title,
       price,
@@ -924,22 +1086,18 @@ app.post("/api/products", (req, res) => {
       category: category || (title ? title.split(" ")[0] : "General"),
       image: image || null,
     };
-    items.push(product);
-    writeProducts(items);
-    res.status(201).json(product);
+    const savedProduct = await saveProduct(productData);
+    res.status(201).json(savedProduct);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete("/api/products/:id", (req, res) => {
+app.delete("/api/products/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
-    const items = readProducts();
-    const exists = items.some((p) => String(p.id) === id);
-    const next = items.filter((p) => String(p.id) !== id);
-    writeProducts(next);
-    if (!exists) return res.status(404).json({ error: "Not found" });
+    const deleted = await deleteProduct(id);
+    if (!deleted) return res.status(404).json({ error: "Product not found" });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -947,20 +1105,23 @@ app.delete("/api/products/:id", (req, res) => {
 });
 
 // Flash products API
-app.get("/api/flash-products", (req, res) => {
-  const items = readFlash();
-  res.json(items);
+app.get("/api/flash-products", async (req, res) => {
+  try {
+    const items = await readFlashProducts();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post("/api/flash-products", (req, res) => {
+app.post("/api/flash-products", async (req, res) => {
   try {
     const { id, title, price, stock, category, image, startsAt, endsAt, discount } = req.body || {};
     if (!title || typeof price !== "number") {
       return res.status(400).json({ error: "Missing required fields: title, price" });
     }
-    const items = readFlash();
     const pid = String(id || `${title}-${Date.now()}`);
-    const product = {
+    const productData = {
       id: pid,
       title,
       price,
@@ -971,22 +1132,18 @@ app.post("/api/flash-products", (req, res) => {
       endsAt: endsAt || null,
       discount: typeof discount === 'number' ? discount : null,
     };
-    items.push(product);
-    writeFlash(items);
-    res.status(201).json(product);
+    const savedProduct = await saveFlashProduct(productData);
+    res.status(201).json(savedProduct);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete("/api/flash-products/:id", (req, res) => {
+app.delete("/api/flash-products/:id", async (req, res) => {
   try {
     const id = String(req.params.id);
-    const items = readFlash();
-    const exists = items.some((p) => String(p.id) === id);
-    const next = items.filter((p) => String(p.id) !== id);
-    writeFlash(next);
-    if (!exists) return res.status(404).json({ error: "Not found" });
+    const deleted = await deleteFlashProduct(id);
+    if (!deleted) return res.status(404).json({ error: "Flash product not found" });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

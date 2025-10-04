@@ -112,7 +112,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/flash-products');
+        const res = await fetch(getApiUrl('/api/flash-products'));
         if (!res.ok) throw new Error(`Failed to load flash products: ${res.status}`);
         const data = await res.json();
         if (!cancelled) setFlashItems(Array.isArray(data) ? data : []);
@@ -921,7 +921,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
                     imageUrl = await storageService.uploadFlashImage(flashImageFile, pid);
                   }
                   const payload = { id: pid, title, price, stock, category, image: imageUrl, discount, startsAt, endsAt };
-                  const res = await fetch('/api/flash-products', {
+                  const res = await fetch(getApiUrl('/api/flash-products'), {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                   });
                   if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `Failed: ${res.status}`); }
@@ -1032,7 +1032,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
                         <button className="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
                           onClick={async ()=>{
                             try{
-                              const res = await fetch(`/api/flash-products/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
+                              const res = await fetch(getApiUrl(`/api/flash-products/${encodeURIComponent(p.id)}`), { method: 'DELETE' });
                               if(!res.ok){ const err = await res.json().catch(()=>({})); throw new Error(err.error||`Failed: ${res.status}`);} 
                               setFlashItems((prev)=> prev.filter(x=>x.id!==p.id));
                             }catch(err){
