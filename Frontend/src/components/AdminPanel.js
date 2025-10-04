@@ -5,6 +5,7 @@ import storageService from "../services/storage";
 import axios from "axios";
 import EmailTest from "./EmailTest";
 import PayHereConfig from "./PayHereConfig";
+import ApiTest from "./ApiTest";
 import { getApiUrl } from "../config/api";
 
 export default function AdminPanel({ onBack, isAdmin = false }) {
@@ -460,6 +461,7 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
               { key: "chat", label: "Live Chat" },
               { key: "email", label: "📧 Email Setup" },
               { key: "payhere", label: "💳 PayHere Config" },
+              { key: "apitest", label: "🔧 API Test" },
             ].map((t) => (
               <button
                 key={t.key}
@@ -1407,6 +1409,18 @@ export default function AdminPanel({ onBack, isAdmin = false }) {
             transition={{ duration: 0.2 }}
           >
             <PayHereConfig onBack={() => setTab("products")} />
+          </motion.div>
+        )}
+
+        {tab === "apitest" && (
+          <motion.div
+            key="apitest"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ApiTest />
           </motion.div>
         )}
       </AnimatePresence>
